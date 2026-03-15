@@ -9,7 +9,7 @@ export async function GET() {
       message:
         'This endpoint supports POST. You opened it in the browser (GET), so here is a friendly response. Use POST /api/demo/blocking to run the demo.',
     },
-    { status: 200 }
+    { status: 200 },
   )
 }
 
@@ -17,6 +17,11 @@ export async function POST() {
   const response = await generateText({
     model: google('gemini-2.5-flash'),
     prompt: 'Write a vegetarian lasagna recipe for 4 people.',
+    experimental_telemetry: {
+      isEnabled: true,
+      recordInputs: true,
+      recordOutputs: true,
+    },
   })
 
   return Response.json({ response })
