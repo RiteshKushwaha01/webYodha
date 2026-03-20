@@ -74,7 +74,7 @@ export const Navbar = ({ projectId }: { projectId: Id<'projects'> }) => {
                   <Link href="/">
                     <Image src="/logo.svg" alt="Logo" width={20} height={20} />
                     <span className={cn('text-sm font-medium', font.className)}>
-                      WebYodha
+                      webYodha
                     </span>
                   </Link>
                 </Button>

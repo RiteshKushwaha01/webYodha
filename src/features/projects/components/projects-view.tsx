@@ -11,8 +11,8 @@ import { Kbd } from '@/components/ui/kbd'
 
 import { ProjectsList } from './projects-list'
 import { ProjectsCommandDialog } from './projects-command-dialog'
-// import { ImportGithubDialog } from './import-github-dialog'
-// import { NewProjectDialog } from './new-prjecot-dialog'
+import { ImportGithubDialog } from './import-github-dialog'
+import { NewProjectDialog } from './new-project-dialog'
 
 const font = Poppins({
   subsets: ['latin'],
@@ -52,14 +52,14 @@ export const ProjectsView = () => {
         open={commandDialogOpen}
         onOpenChange={setCommandDialogOpen}
       />
-      {/* <ImportGithubDialog
+      <ImportGithubDialog
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
       />
-      <NewProjectDialog
+       <NewProjectDialog
         open={newProjectDialogOpen}
         onOpenChange={setNewProjectDialogOpen}
-      /> */}
+      />
       <div className="min-h-screen bg-sidebar flex flex-col items-center justify-center p-6 md:p-16">
         <div className="w-full max-w-sm mx-auto flex flex-col gap-4 items-center">
           <div className="flex justify-between gap-4 w-full items-center">

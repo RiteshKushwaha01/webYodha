@@ -5,11 +5,11 @@ import { Allotment } from 'allotment'
 import { FaGithub } from 'react-icons/fa'
 
 import { cn } from '@/lib/utils'
-// import { EditorView } from '@/features/editor/components/editor-view'
+import { EditorView } from '@/features/editor/components/editor-view'
 
 import { FileExplorer } from './file-explorer'
 import { Id } from '../../../../convex/_generated/dataModel'
-// import { PreviewView } from './preview-view'
+import { PreviewView } from './preview-view'
 import { ExportPopover } from './export-popover'
 
 const MIN_SIDEBAR_WIDTH = 200
@@ -75,9 +75,9 @@ export const ProjectIdView = ({ projectId }: { projectId: Id<'projects'> }) => {
             >
               <FileExplorer projectId={projectId} />
             </Allotment.Pane>
-            {/* <Allotment.Pane>
+            <Allotment.Pane>
               <EditorView projectId={projectId} />
-            </Allotment.Pane> */}
+            </Allotment.Pane>
           </Allotment>
         </div>
         <div
@@ -86,7 +86,7 @@ export const ProjectIdView = ({ projectId }: { projectId: Id<'projects'> }) => {
             activeView === 'preview' ? 'visible' : 'invisible',
           )}
         >
-          {/* <PreviewView projectId={projectId} /> */}
+          <PreviewView projectId={projectId} />
         </div>
       </div>
     </div>
