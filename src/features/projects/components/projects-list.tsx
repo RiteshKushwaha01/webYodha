@@ -110,7 +110,7 @@ export const ProjectsList = ({ onViewAll }: ProjectsListProps) => {
               className="flex items-center gap-2 text-muted-foreground text-xs hover:text-foreground transition-colors"
             >
               <span>View all</span>
-              <Kbd className="bg-accent border">⌘K</Kbd>
+              <Kbd className="bg-accent border">Ctrl+K</Kbd>
             </button>
           </div>
           <ul className="flex flex-col">
