@@ -213,7 +213,6 @@ export const processMessage = inngest.createFunction(
       typeof (err as { message: unknown }).message === 'string' &&
       String((err as { message: unknown }).message).includes('429')
 
-    let lastError: unknown
     let result: Awaited<ReturnType<typeof network.run>> | undefined
 
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -221,9 +220,7 @@ export const processMessage = inngest.createFunction(
         result = await network.run(message)
         break
       } catch (err) {
-        lastError = err
         if (!is429(err) || attempt === 2) break
-        // 1s, 2s, 4s (capped by MaxIter reduction above)
         await step.sleep(`retry-after-429-${attempt}`, `${2 ** attempt}s`)
       }
     }

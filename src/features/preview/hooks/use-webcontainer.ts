@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { WebContainer } from "@webcontainer/api";
 
-import { 
+import {
   buildFileTree,
   getFilePath
 } from "@/features/preview/utils/file-tree";
 import { useFiles } from "@/features/projects/hooks/use-files";
 
-import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 
 // Singleton WebContainer instance
@@ -60,12 +59,41 @@ export const useWebContainer = ({
   const containerRef = useRef<WebContainer | null>(null);
   const hasStartedRef = useRef(false);
 
+  // Sync file changes (hot-reload)
+  const syncedFilesRef = useRef<Set<string>>(new Set());
+
+  // Track file count to detect when to restart for new files during boot
+  const filesCountRef = useRef(0);
+
   // Fetch files from Convex (auto-updates on changes)
   const files = useFiles(projectId);
 
-  // Initial boot and mount
+  // Initial boot and mount - start when files become available
   useEffect(() => {
-    if (!enabled || !files || files.length === 0 || hasStartedRef.current) {
+    if (!enabled || !files || files.length === 0) {
+      return;
+    }
+
+    // Track file count changes
+    const prevCount = filesCountRef.current;
+    filesCountRef.current = files.length;
+
+    // If already running and file count increased significantly, restart
+    if (hasStartedRef.current && status === "running") {
+      if (files.length > prevCount + 2) {
+        // Significant new files - restart to remount fresh
+        teardownWebContainer();
+        containerRef.current = null;
+        hasStartedRef.current = false;
+        syncedFilesRef.current.clear();
+        setStatus("idle");
+        setPreviewUrl(null);
+      }
+      return;
+    }
+
+    // Skip if already started
+    if (hasStartedRef.current) {
       return;
     }
 
@@ -94,10 +122,22 @@ export const useWebContainer = ({
 
         setStatus("installing");
 
+        // Check if this is a Node.js project with package.json
+        const hasPackageJson = files.some(
+          (f) => f.name === "package.json" && !f.parentId
+        );
+
+        if (!hasPackageJson) {
+          // For static sites without package.json, just show the files
+          setStatus("running");
+          appendOutput("No package.json found. Running in static mode.\n");
+          return;
+        }
+
         // Parse install command (default: npm install)
         const installCmd = settings?.installCommand || "npm install";
         const [installBin, ...installArgs] = installCmd.split(" ");
-        appendOutput(`$ ${installCmd}\n`)
+        appendOutput(`$ ${installCmd}\n`);
         const installProcess = await container.spawn(installBin, installArgs);
         installProcess.output.pipeTo(
           new WritableStream({
@@ -109,9 +149,7 @@ export const useWebContainer = ({
         const installExitCode = await installProcess.exit;
 
         if (installExitCode !== 0) {
-          throw new Error(
-            `${installCmd} failed with code ${installExitCode}`
-          );
+          throw new Error(`${installCmd} failed with code ${installExitCode}`);
         }
 
         // Parse dev command (default: npm run dev)
@@ -133,17 +171,9 @@ export const useWebContainer = ({
     };
 
     start();
-  }, [
-    enabled,
-    files,
-    restartKey,
-    settings?.devCommand,
-    settings?.installCommand,
-  ]);
+  }, [enabled, files, restartKey, settings?.devCommand, settings?.installCommand, status]);
 
   // Sync file changes (hot-reload)
-  const syncedFilesRef = useRef<Set<string>>(new Set());
-
   useEffect(() => {
     const container = containerRef.current;
     if (!container || !files) return;
