@@ -75,9 +75,6 @@ export const processMessage = inngest.createFunction(
       )
     }
 
-    // TODO: Check if this is needed
-    await step.sleep('wait-for-db-sync', '1s')
-
     // Get conversation for title generation check
     const conversation = await step.run('get-conversation', async () => {
       return await convex.query(api.system.getConversationById, {
@@ -124,7 +121,7 @@ export const processMessage = inngest.createFunction(
         name: 'title-generator',
         system: TITLE_GENERATOR_SYSTEM_PROMPT,
         model: gemini({
-          model: 'gemini-2.0-flash',
+          model: 'gemini-2.5-flash',
           apiKey: geminiApiKey,
           defaultParameters: {
             generationConfig: { temperature: 0, maxOutputTokens: 50 },
@@ -165,11 +162,10 @@ export const processMessage = inngest.createFunction(
       description: 'An expert AI coding assistant',
       system: systemPrompt,
       model: gemini({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash',
         apiKey: geminiApiKey,
         defaultParameters: {
-          // Lower token budget to reduce per-run quota usage.
-          generationConfig: { temperature: 0.3, maxOutputTokens: 3500 },
+          generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
         },
       }),
       tools: [
@@ -188,9 +184,7 @@ export const processMessage = inngest.createFunction(
     const network = createNetwork({
       name: 'webYodha-network',
       agents: [codingAgent],
-      // Keep this low to reduce Gemini request count per user action.
-      // Otherwise a single "create/update files" run may burn through quota quickly.
-      maxIter: 8,
+      maxIter: 20,
       router: ({ network }) => {
         const lastResult = network.state.results.at(-1)
         const hasTextResponse = lastResult?.output.some(

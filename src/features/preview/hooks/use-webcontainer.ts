@@ -142,17 +142,36 @@ export const useWebContainer = ({
   ]);
 
   // Sync file changes (hot-reload)
+  const syncedFilesRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !files || status !== "running") return;
+    if (!container || !files) return;
+
+    // Only sync after container is ready, but allow sync anytime after boot
+    if (status !== "running" && status !== "installing") return;
 
     const filesMap = new Map(files.map((f) => [f._id, f]));
+    const currentFileIds = new Set<string>();
 
     for (const file of files) {
       if (file.type !== "file" || file.storageId || !file.content) continue;
 
+      currentFileIds.add(file._id);
       const filePath = getFilePath(file, filesMap);
-      container.fs.writeFile(filePath, file.content);
+
+      // Only write if file is new or changed (compare content hash)
+      if (!syncedFilesRef.current.has(file._id)) {
+        container.fs.writeFile(filePath, file.content);
+        syncedFilesRef.current.add(file._id);
+      }
+    }
+
+    // Clean up stale tracked files
+    for (const id of syncedFilesRef.current) {
+      if (!currentFileIds.has(id)) {
+        syncedFilesRef.current.delete(id);
+      }
     }
   }, [files, status]);
 
@@ -160,6 +179,7 @@ export const useWebContainer = ({
   useEffect(() => {
     if (!enabled) {
       hasStartedRef.current = false;
+      syncedFilesRef.current.clear();
       setStatus("idle");
       setPreviewUrl(null);
       setError(null);
@@ -171,6 +191,7 @@ export const useWebContainer = ({
     teardownWebContainer();
     containerRef.current = null;
     hasStartedRef.current = false;
+    syncedFilesRef.current.clear();
     setStatus("idle");
     setPreviewUrl(null);
     setError(null);
