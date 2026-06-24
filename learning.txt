@@ -1,2 +1,0 @@
-to clear out the cache run the command 
-rm -rf .next
