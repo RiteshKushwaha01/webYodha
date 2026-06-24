@@ -74,23 +74,36 @@ export const useWebContainer = ({
       return;
     }
 
+    // Check if we have a package.json before starting
+    const hasPackageJson = files.some(
+      (f) => f.name === "package.json" && !f.parentId
+    );
+
+    // Don't start until we have package.json (required for dev server)
+    if (!hasPackageJson && !hasStartedRef.current) {
+      return;
+    }
+
     // Track file count changes
     const prevCount = filesCountRef.current;
-    filesCountRef.current = files.length;
+    const newFileCount = files.length;
 
     // If already running and file count increased significantly, restart
     if (hasStartedRef.current && status === "running") {
-      if (files.length > prevCount + 2) {
+      if (newFileCount > prevCount + 2) {
         // Significant new files - restart to remount fresh
         teardownWebContainer();
         containerRef.current = null;
         hasStartedRef.current = false;
         syncedFilesRef.current.clear();
-        setStatus("idle");
-        setPreviewUrl(null);
+        filesCountRef.current = 0;
+        setRestartKey((k) => k + 1);
       }
       return;
     }
+
+    // Update file count for next comparison
+    filesCountRef.current = newFileCount;
 
     // Skip if already started
     if (hasStartedRef.current) {
@@ -121,18 +134,6 @@ export const useWebContainer = ({
         });
 
         setStatus("installing");
-
-        // Check if this is a Node.js project with package.json
-        const hasPackageJson = files.some(
-          (f) => f.name === "package.json" && !f.parentId
-        );
-
-        if (!hasPackageJson) {
-          // For static sites without package.json, just show the files
-          setStatus("running");
-          appendOutput("No package.json found. Running in static mode.\n");
-          return;
-        }
 
         // Parse install command (default: npm install)
         const installCmd = settings?.installCommand || "npm install";
@@ -210,6 +211,7 @@ export const useWebContainer = ({
     if (!enabled) {
       hasStartedRef.current = false;
       syncedFilesRef.current.clear();
+      filesCountRef.current = 0;
       setStatus("idle");
       setPreviewUrl(null);
       setError(null);
@@ -222,6 +224,7 @@ export const useWebContainer = ({
     containerRef.current = null;
     hasStartedRef.current = false;
     syncedFilesRef.current.clear();
+    filesCountRef.current = 0;
     setStatus("idle");
     setPreviewUrl(null);
     setError(null);
