@@ -1,13 +1,11 @@
-import { generateText } from 'ai'
 import { inngest } from './client'
-import { google } from '@ai-sdk/google'
 import { firecrawl } from '@/lib/firecrawl'
+import { generateOpenRouterText } from '@/lib/ai'
 
 const URL_REGEX = /https?:\/\/[^\s]+/g
 
 export const demoGenerate = inngest.createFunction(
-  { id: 'demo-generate' },
-  { event: 'demo/generate' },
+  { id: 'demo-generate', triggers: [{ event: 'demo/generate' }] },
   async ({ event, step }) => {
     const { prompt } = event.data as { prompt: string }
 
@@ -30,22 +28,13 @@ export const demoGenerate = inngest.createFunction(
       : prompt
 
     await step.run('generate-text', async () => {
-      return await generateText({
-        model: google('gemini-2.5-flash'),
-        prompt: finalPrompt,
-        experimental_telemetry: {
-          isEnabled: true,
-          recordInputs: true,
-          recordOutputs: true,
-        },
-      })
+      return await generateOpenRouterText(finalPrompt)
     })
   },
 )
 
 export const demoError = inngest.createFunction(
-  { id: 'demo-error' },
-  { event: 'demo/error' },
+  { id: 'demo-error', triggers: [{ event: 'demo/error' }] },
   async ({ step }) => {
     await step.run('fail', async () => {
       throw new Error('Inngest error: Background job failed!')

@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 
 import { inngest } from "@/inngest/client";
-
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { convex } from "@/lib/convex-client";
+import { triggerMessageProcessing } from "@/lib/trigger-message-processing";
 
 const requestSchema = z.object({
   conversationId: z.string(),
@@ -98,20 +98,15 @@ export async function POST(request: Request) {
     }
   );
 
-  // Trigger Inngest process the message
-  const event = await inngest.send({
-    name: "message/sent",
-    data: {
-      messageId: assistantMessageId,
-      conversationId,
-      projectId,
-      message,
-    },
+  await triggerMessageProcessing({
+    messageId: assistantMessageId,
+    conversationId: conversationId as Id<"conversations">,
+    projectId,
+    message,
   });
 
   return NextResponse.json({
     success: true,
-    eventId: event.ids[0],
     messageId: assistantMessageId,
   });
 };
