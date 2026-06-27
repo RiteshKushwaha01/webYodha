@@ -1,15 +1,11 @@
-import { generateText, Output } from "ai";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { google } from "@ai-sdk/google";
+
+import { generateGeminiText } from "@/lib/gemini/generate-text";
 
 const suggestionSchema = z.object({
-  suggestion: z
-    .string()
-    .describe(
-      "The code to insert at cursor, or empty string if no completion needed"
-    ),
+  suggestion: z.string(),
 });
 
 const SUGGESTION_PROMPT = `You are a code suggestion assistant.
@@ -40,17 +36,22 @@ Follow these steps IN ORDER:
 3. Only if steps 1 and 2 don't apply: suggest what should be typed at the cursor position, using context from full_code.
 
 Your suggestion is inserted immediately after the cursor, so never suggest code that's already in the file.
+
+Respond with JSON only: {"suggestion": "code to insert or empty string"}
 </instructions>`;
+
+function parseJsonResponse<T>(text: string, schema: z.ZodType<T>): T {
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('No JSON in response')
+  return schema.parse(JSON.parse(jsonMatch[0]))
+}
 
 export async function POST(request: Request) {
   try {
     const { userId } = await auth();
 
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 },
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const {
@@ -65,10 +66,7 @@ export async function POST(request: Request) {
     } = await request.json();
 
     if (!code) {
-      return NextResponse.json(
-        { error: "Code is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Code is required" }, { status: 400 });
     }
 
     const prompt = SUGGESTION_PROMPT
@@ -81,13 +79,10 @@ export async function POST(request: Request) {
       .replace("{nextLines}", nextLines || "")
       .replace("{lineNumber}", lineNumber.toString());
 
-    const { output } = await generateText({
-      model: google("gemini-2.0-flash"),
-      output: Output.object({ schema: suggestionSchema }),
-      prompt,
-    });
+    const text = await generateGeminiText(prompt);
+    const output = parseJsonResponse(text, suggestionSchema);
 
-    return NextResponse.json({ suggestion: output.suggestion })
+    return NextResponse.json({ suggestion: output.suggestion });
   } catch (error) {
     console.error("Suggestion error: ", error);
     return NextResponse.json(

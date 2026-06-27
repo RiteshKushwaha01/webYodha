@@ -47,18 +47,30 @@ export async function POST(request: Request) {
   // Cancel all processing messages
   const cancelledIds = await Promise.all(
     processingMessages.map(async (msg) => {
-      await inngest.send({
-        name: "message/cancel",
-        data: {
-          messageId: msg._id,
-        },
-      });
+      try {
+        await inngest.send({
+          name: "message/cancel",
+          data: {
+            messageId: msg._id,
+          },
+        });
+      } catch (err) {
+        // Log the error but continue — the important part is updating status in Convex
+        // eslint-disable-next-line no-console
+        console.error('Inngest send failed for message', msg._id, err);
+      }
 
-      await convex.mutation(api.system.updateMessageStatus, {
-        internalKey,
-        messageId: msg._id,
-        status: "cancelled",
-      });
+      try {
+        await convex.mutation(api.system.updateMessageStatus, {
+          internalKey,
+          messageId: msg._id,
+          status: "cancelled",
+        });
+      } catch (err) {
+        // If updating Convex fails, log and surface later
+        // eslint-disable-next-line no-console
+        console.error('Failed to update message status in Convex for', msg._id, err);
+      }
 
       return msg._id;
     })

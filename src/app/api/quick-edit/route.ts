@@ -1,17 +1,12 @@
 import { z } from 'zod'
-import { generateText, Output } from 'ai'
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { google } from '@ai-sdk/google'
 
+import { generateGeminiText } from '@/lib/gemini/generate-text'
 import { firecrawl } from '@/lib/firecrawl'
 
 const quickEditSchema = z.object({
-  editedCode: z
-    .string()
-    .describe(
-      'The edited version of the selected code based on the instruction',
-    ),
+  editedCode: z.string(),
 })
 
 const URL_REGEX = /https?:\/\/[^\s)>\]]+/g
@@ -34,11 +29,17 @@ const QUICK_EDIT_PROMPT = `You are a code editing assistant. Edit the selected c
 </instruction>
 
 <instructions>
-Return ONLY the edited version of the selected code.
+Return ONLY JSON: {"editedCode": "the edited version of the selected code"}
 Maintain the same indentation level as the original.
 Do not include any explanations or comments unless requested.
 If the instruction is unclear or cannot be applied, return the original code unchanged.
 </instructions>`
+
+function parseJsonResponse<T>(text: string, schema: z.ZodType<T>): T {
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('No JSON in response')
+  return schema.parse(JSON.parse(jsonMatch[0]))
+}
 
 export async function POST(request: Request) {
   try {
@@ -97,11 +98,8 @@ export async function POST(request: Request) {
       .replace('{instruction}', instruction)
       .replace('{documentation}', documentationContext)
 
-    const { output } = await generateText({
-      model: google('gemini-2.0-flash'),
-      output: Output.object({ schema: quickEditSchema }),
-      prompt,
-    })
+    const text = await generateGeminiText(prompt)
+    const output = parseJsonResponse(text, quickEditSchema)
 
     return NextResponse.json({ editedCode: output.editedCode })
   } catch (error) {

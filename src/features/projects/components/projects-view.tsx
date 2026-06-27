@@ -56,7 +56,7 @@ export const ProjectsView = () => {
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
       />
-       <NewProjectDialog
+      <NewProjectDialog
         open={newProjectDialogOpen}
         onOpenChange={setNewProjectDialogOpen}
       />
@@ -66,7 +66,7 @@ export const ProjectsView = () => {
             <div className="flex items-center gap-2 w-full group/logo">
               <img
                 src="/logo.svg"
-                alt="WevYodha"
+                alt="WebYodha"
                 className="size-[32px] md:size-[46px]"
               />
               <h1
@@ -75,7 +75,7 @@ export const ProjectsView = () => {
                   font.className,
                 )}
               >
-                WevYodha
+                WebYodha
               </h1>
             </div>
           </div>
