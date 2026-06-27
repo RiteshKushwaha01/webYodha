@@ -109,10 +109,16 @@ export const useWebContainer = ({
     }
   }, [])
 
+  // Sync file changes (hot-reload)
+  const syncedFilesRef = useRef<Set<string>>(new Set());
+
+  // Track file count to detect when to restart for new files during boot
+  const filesCountRef = useRef(0);
+
   // Fetch files from Convex (auto-updates on changes)
   const files = useFiles(projectId)
 
-  // Initial boot and mount
+  // Initial boot and mount - start when files become available
   useEffect(() => {
     if (!enabled || !files || files.length === 0 || hasStartedRef.current) {
       return
